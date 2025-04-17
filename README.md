@@ -414,8 +414,16 @@ kendala: tidak ada
 
 screenshot saat ./action:
 
+![Screenshot 2025-04-17 195551](https://github.com/user-attachments/assets/226cda16-b223-41c2-a88a-be929c8d8f8d)
+
 screenshot saat ./action -m Filtered:
+
+![Screenshot 2025-04-17 195626](https://github.com/user-attachments/assets/44a486a4-c71a-4552-8942-ec8f763275ce)
 
 screenshot saat ./action -m Combine:
 
+![Screenshot 2025-04-17 195700](https://github.com/user-attachments/assets/fb71f9eb-8f19-4cd0-9792-2cf17184e20b)
+
 screenshot saat ./action -m Decode:
+
+![Screenshot 2025-04-17 195729](https://github.com/user-attachments/assets/d00ab73e-aed8-4d01-80fd-37574bb09592)
