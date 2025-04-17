@@ -409,3 +409,13 @@ int main(int argc, char *argv[]) {
 ```
 setelah melakukan semuanya, kita mendapatkan password untuk di input ke cyrus
 ![image](https://github.com/user-attachments/assets/228f7f14-99c1-42d4-9d32-63fe078be647)
+
+kendala: tidak ada
+
+screenshot saat ./action:
+
+screenshot saat ./action -m Filtered:
+
+screenshot saat ./action -m Combine:
+
+screenshot saat ./action -m Decode:
