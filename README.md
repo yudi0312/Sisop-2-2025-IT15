@@ -444,14 +444,9 @@ berikut contohnya:
 ### b) Dekripsi Nama File dengan Base64 (Daemon)
 Fungsi Penting:
 -start_decrypt_daemon(): Menjalankan proses daemon untuk memantau direktori karantina.
+![image](https://github.com/user-attachments/assets/91ee6ec5-5559-4eae-88f5-2af186f7a848)
 
-void start_decrypt_daemon() {
-    daemon_setup();
-    save_pid();
-    mkdir("quarantine", 0755);
-    move_to_quarantine(); // Pindahkan file dari starter_kit
-    log_activity("Successfully started decryption process with PID %d.", getpid());
-    
+
     int attempts = 0;
     while (1) {
         int processed = process_quarantine();
@@ -469,10 +464,7 @@ void start_decrypt_daemon() {
 }
 
 -base64_decode(): Algoritma dekripsi Base64.
-int base64_decode(const char *input, char *output) {
-    int i = 0, j = 0;
-    int pad = 0;
-    int val[4];
+![image](https://github.com/user-attachments/assets/e4aa152d-64c3-49d8-b812-6ed007732921)
     
     while (input[i]) {
         while (input[i] && base64_char_value(input[i]) == -1 && input[i] != '=') i++;
@@ -495,10 +487,8 @@ int base64_decode(const char *input, char *output) {
     return j;
 }
 -process_quarantine(): Memproses semua file di direktori karantina untuk didekripsi.
-int process_quarantine() {
-    DIR *dir = opendir("quarantine");
-    if (!dir) return 0;
-    
+![image](https://github.com/user-attachments/assets/c5beb106-40a6-4f95-90db-cdf3305e984d)
+
     int count = 0;
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
@@ -525,13 +515,7 @@ Fitur:
 
 Fungsi:
 move_to_quarantine(): Encode nama file ke Base64 sebelum dipindahkan.
-void move_to_quarantine() {
-        struct stat st;
-        if (stat("starter_kit", &st) == -1) {
-            log_activity("Error: Direktori starter_kit tidak ada");
-            printf("Direktori starter_kit tidak ditemukan\n");
-            return;
-        }
+![image](https://github.com/user-attachments/assets/f7e73c0f-7670-48f7-b97d-ecd7848009b0)
 
     DIR *dir = opendir("starter_kit");
     if (!dir) {
@@ -563,11 +547,7 @@ void move_to_quarantine() {
 
 
 move_from_quarantine_to_starter_kit(): Decode nama file saat dikembalikan.
-void move_from_quarantine_to_starter_kit() {
-    struct stat st = {0};
-    if (stat("starter_kit", &st) == -1) {
-        mkdir("starter_kit", 0755);
-    }
+![image](https://github.com/user-attachments/assets/afcfd7a3-d3ab-4116-a8f4-8605c77885b0)
 
     DIR *dir = opendir("quarantine");
     if (!dir) {
@@ -607,10 +587,7 @@ Contoh penggunaan: ./starterkit --quarantine dan ./starterkit --return
 ### d) Menghapus File di Karantina (--eradicate)
 Fungsi:
 eradicate_quarantine(): Menghapus semua file di direktori quarantine. *Menggunakan unlink() untuk menghapus file.
-void eradicate_quarantine() {
-    if (rmdir("quarantine") == 0) {
-        log_activity("Direktori quarantine dihapus");
-    }
+![image](https://github.com/user-attachments/assets/eae0f7dc-3fb7-4e35-bcef-dab963ee8c2a)
 
     DIR *dir = opendir("quarantine");
     if (!dir) {
@@ -648,14 +625,8 @@ Log aktivitas akan tercatat di activity.log.
 ### e) Mematikan Proses Daemon
 Fungsi:
 shutdown_program(): Membaca PID dari file .quarantine.pid dan mengirim sinyal SIGTERM ke proses daemon. * terdapat Error handling juga yaitu: Cek keberadaan proses sebelum terminasi.
-void shutdown_program() {
-    FILE *pid_file = fopen(".quarantine.pid", "r");
-    if (!pid_file) {
-        log_activity("Shutdown gagal: File PID tidak ditemukan");
-        printf("Daemon tidak aktif\n");
-        return;
-    }
-    
+![image](https://github.com/user-attachments/assets/1bceb586-a1af-4f87-9b64-d3a2ee1c2189)
+
     int pid;
     if (fscanf(pid_file, "%d", &pid) != 1) {
         log_activity("Shutdown gagal: Format PID tidak valid");
@@ -692,26 +663,13 @@ Contoh penggunaan: ./starterkit --shutdown
 ### f. Error Handling
 Implementasi:
 -Validasi argumen command line.
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Error: Jumlah argumen salah\n");
-        printf("Penggunaan: ./starterkit [--decrypt|--shutdown|--quarantine|--return|--eradicate]\n");
-        exit(EXIT_FAILURE);
-    }
-    // ... 
-}
+![image](https://github.com/user-attachments/assets/d9437693-2784-4156-9faa-604f1eb159cb)
 
 >> Memastikan jumlah argumen tepat (2: nama program + 1 opsi).
 Jika tidak, program menampilkan pesan error dan keluar.
 
 -Pengecekan keberadaan direktori (stat("quarantine", &st)).
-void move_to_quarantine() {
-    struct stat st;
-    if (stat("starter_kit", &st) == -1) {
-        log_activity("Error: Direktori starter_kit tidak ada");
-        printf("Direktori starter_kit tidak ditemukan\n");
-        return;
-    }
+![image](https://github.com/user-attachments/assets/dddd443c-46e1-4311-bcd0-c4c4b30a0649)
 
     DIR *dir = opendir("starter_kit");
     if (!dir) {
@@ -724,13 +682,8 @@ void move_to_quarantine() {
 >> Mengecek keberadaan direktori starter_kit sebelum operasi pemindahan file. Jika direktori tidak ada, error dicatat di log dan fungsi berhenti.
 
 -Penanganan kesalahan sistem (e.g., rename(), unlink()).
-void shutdown_program() {
-    FILE *pid_file = fopen(".quarantine.pid", "r");
-    if (!pid_file) {
-        log_activity("Shutdown gagal: File PID tidak ditemukan");
-        printf("Daemon tidak aktif\n");
-        return;
-    }
+![image](https://github.com/user-attachments/assets/b09e1389-038c-4df6-9efc-e34d7ddff814)
+
 
     int pid;
     if (fscanf(pid_file, "%d", &pid) != 1) {
@@ -745,38 +698,17 @@ void shutdown_program() {
 >> Mengecek apakah file PID ada dan berformat benar. Jika file tidak ada atau korup, error dicatat di log.
 
 -Validasi format Base64 dengan is_valid_base64()
-int rename_decrypted_file(const char *filepath) {
-    // ...
-    if (!is_valid_base64(filename)) {
-        return 0;
-    }
-    // ...
-}
+![image](https://github.com/user-attachments/assets/e244f187-8e1e-4bac-a4fa-1ba8609dde2f)
 
 >> Memvalidasi nama file di direktori karantina sebelum dekripsi. Jika format Base64 tidak valid, file diabaikan.
 
 -Penanganan Gagal Hapus File
-void eradicate_quarantine() {
-    // ...
-    if (unlink(filepath) != 0) {
-        log_activity("Gagal menghapus: %s (Error: %s)", entry->d_name, strerror(errno));
-    }
-    // ...
-}
+![image](https://github.com/user-attachments/assets/962d1f94-e49c-478d-ad96-9ff2e70b3d06)
 
 >> Jika penghapusan file gagal, penyebab error ditulis ke log (e.g., permission denied). Menggunakan strerror(errno) untuk deskripsi error yang jelas.
 
 -Pengecekan Buffer Overflow
-#define BUFFER_SIZE 4096  // Diperbesar untuk memastikan cukup
-
-int rename_decrypted_file(const char *filepath) {
-    char decoded[4096];
-    // ...
-    if (strlen(decoded) >= 4096) {
-        log_activity("Error: Nama file dekripsi terlalu panjang");
-        return 0;
-    }
-}
+![image](https://github.com/user-attachments/assets/358033f8-a764-484c-9c7c-226eda806431)
 
 >>Mengecek panjang nama file hasil dekripsi untuk mencegah buffer overflow.
 
