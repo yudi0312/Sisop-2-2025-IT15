@@ -488,6 +488,7 @@ Fungsi Penting:
     return j;
 }
 -process_quarantine(): Memproses semua file di direktori karantina untuk didekripsi.
+
 ![image](https://github.com/user-attachments/assets/c5beb106-40a6-4f95-90db-cdf3305e984d)
 
     int count = 0;
@@ -516,6 +517,7 @@ Fitur:
 
 Fungsi:
 move_to_quarantine(): Encode nama file ke Base64 sebelum dipindahkan.
+
 ![image](https://github.com/user-attachments/assets/f7e73c0f-7670-48f7-b97d-ecd7848009b0)
 
     DIR *dir = opendir("starter_kit");
@@ -548,6 +550,7 @@ move_to_quarantine(): Encode nama file ke Base64 sebelum dipindahkan.
 
 
 move_from_quarantine_to_starter_kit(): Decode nama file saat dikembalikan.
+
 ![image](https://github.com/user-attachments/assets/afcfd7a3-d3ab-4116-a8f4-8605c77885b0)
 
     DIR *dir = opendir("quarantine");
@@ -588,6 +591,7 @@ Contoh penggunaan: ./starterkit --quarantine dan ./starterkit --return
 ### d) Menghapus File di Karantina (--eradicate)
 Fungsi:
 eradicate_quarantine(): Menghapus semua file di direktori quarantine. *Menggunakan unlink() untuk menghapus file.
+
 ![image](https://github.com/user-attachments/assets/eae0f7dc-3fb7-4e35-bcef-dab963ee8c2a)
 
     DIR *dir = opendir("quarantine");
@@ -621,11 +625,13 @@ eradicate_quarantine(): Menghapus semua file di direktori quarantine. *Menggunak
 contoh penggunaan: ./starterkit --eradicate
 
 Log aktivitas akan tercatat di activity.log.
+
 ![image](https://github.com/user-attachments/assets/dd15c984-d6e9-4b7d-a6b7-fc66b53d95d6)
 
 ### e) Mematikan Proses Daemon
 Fungsi:
 shutdown_program(): Membaca PID dari file .quarantine.pid dan mengirim sinyal SIGTERM ke proses daemon. * terdapat Error handling juga yaitu: Cek keberadaan proses sebelum terminasi.
+
 ![image](https://github.com/user-attachments/assets/1bceb586-a1af-4f87-9b64-d3a2ee1c2189)
 
     int pid;
@@ -664,12 +670,14 @@ Contoh penggunaan: ./starterkit --shutdown
 ### f. Error Handling
 Implementasi:
 -Validasi argumen command line.
+
 ![image](https://github.com/user-attachments/assets/d9437693-2784-4156-9faa-604f1eb159cb)
 
 >> Memastikan jumlah argumen tepat (2: nama program + 1 opsi).
 Jika tidak, program menampilkan pesan error dan keluar.
 
 -Pengecekan keberadaan direktori (stat("quarantine", &st)).
+
 ![image](https://github.com/user-attachments/assets/dddd443c-46e1-4311-bcd0-c4c4b30a0649)
 
     DIR *dir = opendir("starter_kit");
@@ -683,6 +691,7 @@ Jika tidak, program menampilkan pesan error dan keluar.
 >> Mengecek keberadaan direktori starter_kit sebelum operasi pemindahan file. Jika direktori tidak ada, error dicatat di log dan fungsi berhenti.
 
 -Penanganan kesalahan sistem (e.g., rename(), unlink()).
+
 ![image](https://github.com/user-attachments/assets/b09e1389-038c-4df6-9efc-e34d7ddff814)
 
 
@@ -699,23 +708,31 @@ Jika tidak, program menampilkan pesan error dan keluar.
 >> Mengecek apakah file PID ada dan berformat benar. Jika file tidak ada atau korup, error dicatat di log.
 
 -Validasi format Base64 dengan is_valid_base64()
+
 ![image](https://github.com/user-attachments/assets/e244f187-8e1e-4bac-a4fa-1ba8609dde2f)
 
 >> Memvalidasi nama file di direktori karantina sebelum dekripsi. Jika format Base64 tidak valid, file diabaikan.
 
 -Penanganan Gagal Hapus File
+
 ![image](https://github.com/user-attachments/assets/962d1f94-e49c-478d-ad96-9ff2e70b3d06)
 
 >> Jika penghapusan file gagal, penyebab error ditulis ke log (e.g., permission denied). Menggunakan strerror(errno) untuk deskripsi error yang jelas.
 
 -Pengecekan Buffer Overflow
+
 ![image](https://github.com/user-attachments/assets/358033f8-a764-484c-9c7c-226eda806431)
 
 >>Mengecek panjang nama file hasil dekripsi untuk mencegah buffer overflow.
 
 ### contoh output struktur direktori
+
 ![image](https://github.com/user-attachments/assets/68189a6e-9b52-4edc-b9c5-67e4829cb968)
 
+### kendala 
+mengalami looping daemon tak tentu hingga ribuan line pada activity.log
+
+![image](https://github.com/user-attachments/assets/b82a8e73-e5c6-4d4b-86a4-0073eaef1978)
 
 # Soal_3
 ### a)
