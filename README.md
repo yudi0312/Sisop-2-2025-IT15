@@ -6,6 +6,10 @@ Anggota kelompok :
 - Az Zahrra Tasya Adelia	        5027241087
 
 # soal_1
+> Soal ini tidak ada revisi
+
+Author : Naruna Vicranthyo Putra Gangga (5027241105)
+
 ### a) Downloading the Clues
 pertama-tama kita membuat file action.c yang dimana kalau dijalankan tanpa argumen tambahan akan mendownload dan langsung meng unzip file tersebut. Dan tambahkan juga fungsi agar menghapus file Clues.zip setelah diekstrak dan semisal saat dijalankan folder Clues sudah ada, maka tidak akan mendownload Clues.zip lagi.
 ```C
@@ -735,6 +739,10 @@ mengalami looping daemon tak tentu hingga ribuan line pada activity.log
 ![image](https://github.com/user-attachments/assets/b82a8e73-e5c6-4d4b-86a4-0073eaef1978)
 
 # Soal_3
+> Soal ini tidak ada revisi
+
+Author : Putu Yudi Nandanjaya Wiraguna (5027241080)
+
 ### a)
 Buatlah malware.c yang akan bekerja secara daemon dan mengubah namanya menjadi /init.
 ```C
@@ -1266,6 +1274,11 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 ```
+
+screenshot saat malware.c berjalan:
+
+![image](https://github.com/user-attachments/assets/8073f2cb-ad03-4706-8cb8-1f8fed08e912)
+
 
 ## Soal 4 - Debugmon 
 > Soal ini tidak ada revisi
