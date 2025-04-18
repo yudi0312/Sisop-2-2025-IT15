@@ -433,6 +433,8 @@ screenshot saat ./action -m Decode:
 ![Screenshot 2025-04-17 195729](https://github.com/user-attachments/assets/d00ab73e-aed8-4d01-80fd-37574bb09592)
 
 # Soal_2
+> Author: Az Zahrra Tasya Adelia (5027241087)
+
 ### a) Download & Unzip Starter Kit
 Implementasi:
 Meskipun tidak ada kode download/unzip, program menyiapkan direktori starter_kit untuk menampung hasil unzip.
