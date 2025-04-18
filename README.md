@@ -960,3 +960,412 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 ```
+
+## Soal 4 - Debugmon 
+> Soal ini tidak ada revisi
+
+Author : Putu Yudi Nandanjaya Wiraguna (5027241080)
+
+### Deskripsi
+
+**Fitur Debugmon:**
+
+1. **Mengetahui semua aktivitas user:**  
+   Perintah: `./debugmon list <user>`  
+   Menampilkan daftar semua proses yang berjalan pada user, termasuk PID, command, CPU usage, dan memory usage.
+
+2. **Menjalankan sebagai daemon:**  
+   Perintah: `./debugmon daemon <user>`  
+   Memasang Debugmon untuk memantau aktivitas user secara otomatis dan mencatat ke dalam file log.
+
+3. **Menghentikan pengawasan:**  
+   Perintah: `./debugmon stop <user>`  
+   Menghentikan pengawasan dan menghentikan semua proses yang berjalan.
+
+4. **Menggagalkan semua proses user:**  
+   Perintah: `./debugmon fail <user>`  
+   Menggagalkan semua proses user yang sedang berjalan dan menulis status "FAILED" dalam log. User tidak bisa menjalankan proses lain.
+
+5. **Mengizinkan user untuk kembali menjalankan proses:**  
+   Perintah: `./debugmon revert <user>`  
+   Mengembalikan ke mode normal, memungkinkan user untuk menjalankan proses lagi.
+
+**Format log:**
+Log dicatat dengan format:  
+`[dd:mm:yyyy]-[hh:mm:ss]_nama-process_STATUS(RUNNING/FAILED)`  
+Status "RUNNING" untuk poin b, c, dan e, dan status "FAILED" untuk poin d.
+
+```
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <ctype.h>
+#include <unistd.h>
+#include <pwd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <time.h>
+#include <signal.h>
+
+#define PROC_PATH "/proc"
+#define LOGFILE "debugmon.log"
+```
+
+Melakukan deklarasi terhadap library yang akan digunakan pada program dan mendefinisikan path ke `/proc` dan nama file log.
+
+```
+uid_t get_uid(const char *username) {
+    struct passwd *pw = getpwnam(username);
+    if (!pw) {
+        fprintf(stderr, "User '%s' tidak ditemukan.\n", username);
+        exit(EXIT_FAILURE);
+    }
+    return pw->pw_uid;
+}
+```
+
+Fungsi ini mengambil UID dari username. Menggunakan `getpwnam()` yang mengakses `/etc/passwd`. Jika user tidak ada, tampilkan error dan keluar dari program.
+
+```
+int is_numeric(const char *str) {
+    while (*str) {
+        if (!isdigit(*str)) return 0;
+        str++;
+    }
+    return 1;
+}
+```
+
+Cek apakah suatu string berisi hanya angka (untuk memastikan kita hanya mengecek direktori `/proc/<pid>)`.
+
+```
+void write_log(const char *process_name, const char *status) {
+    FILE *log = fopen(LOGFILE, "a");
+    if (!log) return;
+
+    time_t now = time(NULL);
+    struct tm *local_time = localtime(&now);
+
+    char time_str[64];
+    strftime(time_str, sizeof(time_str), "[%d:%m:%Y]-[%H:%M:%S]", local_time);
+
+    fprintf(log, "%s_%s_%s\n", time_str, process_name, status);
+    fclose(log);
+}
+```
+Fungsi ini menulis log ke file debugmon.log. Log format:
+`[DD:MM:YYYY]-[HH:MM:SS]_nama_proses_STATUS`
+
+```
+void daemonize() {
+    pid_t pid = fork();
+    if (pid < 0) exit(EXIT_FAILURE);
+    if (pid > 0) exit(EXIT_SUCCESS);
+
+    umask(0);
+    setsid();
+
+    if (chdir("/home/yudi0312/Sisop-2-2025-IT15/soal_4/") < 0) exit(EXIT_FAILURE);
+
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    open("/dev/null", O_RDONLY);
+    open("/dev/null", O_WRONLY);
+    open("/dev/null", O_RDWR);
+}
+```
+
+Fungsi ini mengubah program menjadi **daemon**, yaitu proses yang berjalan di latar belakang tanpa interaksi langsung dengan pengguna. Proses ini diawali dengan `fork()` untuk memisahkan diri dari terminal; parent-nya keluar, dan child-nya lanjut. Kemudian `setsid()` membuat session baru sehingga proses tidak lagi menjadi bagian dari terminal. Direktori kerja diubah dengan `chdir()`, lalu stdin, stdout, dan stderr ditutup dan diarahkan ke `/dev/null` agar proses tidak membaca/menulis ke terminal, membuatnya menjadi proses yang bersih dan tidak mengganggu pengguna.
+
+```
+void monitor_user(const char *username, int fail_mode) {
+    uid_t target_uid = get_uid(username);
+
+    while (1) {
+        DIR *dir = opendir(PROC_PATH);
+        if (!dir) {
+            sleep(5);
+            continue;
+        }
+
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (!is_numeric(entry->d_name)) continue;
+
+            int pid = atoi(entry->d_name);
+            char path[256], line[256], proc_name[256] = "-";
+            FILE *fp;
+            uid_t proc_uid;
+
+            snprintf(path, sizeof(path), PROC_PATH"/%d/status", pid);
+            fp = fopen(path, "r");
+            if (!fp) continue;
+
+            while (fgets(line, sizeof(line), fp)) {
+                if (sscanf(line, "Uid: %d", &proc_uid) == 1) break;
+            }
+            fclose(fp);
+
+            if (proc_uid != target_uid) continue;
+
+            snprintf(path, sizeof(path), PROC_PATH"/%d/comm", pid);
+            fp = fopen(path, "r");
+            if (fp) {
+                fgets(proc_name, sizeof(proc_name), fp);
+                proc_name[strcspn(proc_name, "\n")] = 0;
+                fclose(fp);
+            }
+
+            if (strcmp(proc_name, "debugmon") == 0) {
+                write_log(proc_name, "RUNNING");
+            } else if (fail_mode) {
+                if (kill(pid, SIGKILL) == 0) {
+                    write_log(proc_name, "FAILED");
+                }
+            }
+        }
+        closedir(dir);
+        sleep(5);
+    }
+}
+```
+
+Berikut adalah kode fungsi `monitor_user` dan penjelasan dalam satu paragraf:
+
+```c
+// Memantau proses user dan mencatat log sesuai mode
+void monitor_user(const char *username, int fail_mode) {
+    uid_t target_uid = get_uid(username);
+
+    while (1) {
+        DIR *dir = opendir(PROC_PATH);
+        if (!dir) {
+            sleep(5);
+            continue;
+        }
+
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (!is_numeric(entry->d_name)) continue;
+
+            int pid = atoi(entry->d_name);
+            char path[256], line[256], proc_name[256] = "-";
+            FILE *fp;
+            uid_t proc_uid;
+
+            snprintf(path, sizeof(path), PROC_PATH"/%d/status", pid);
+            fp = fopen(path, "r");
+            if (!fp) continue;
+
+            while (fgets(line, sizeof(line), fp)) {
+                if (sscanf(line, "Uid: %d", &proc_uid) == 1) break;
+            }
+            fclose(fp);
+
+            if (proc_uid != target_uid) continue;
+
+            snprintf(path, sizeof(path), PROC_PATH"/%d/comm", pid);
+            fp = fopen(path, "r");
+            if (fp) {
+                fgets(proc_name, sizeof(proc_name), fp);
+                proc_name[strcspn(proc_name, "\n")] = 0;
+                fclose(fp);
+            }
+
+            if (strcmp(proc_name, "debugmon") == 0) {
+                write_log(proc_name, "RUNNING");
+            } else if (fail_mode) {
+                if (kill(pid, SIGKILL) == 0) {
+                    write_log(proc_name, "FAILED");
+                }
+            }
+        }
+        closedir(dir);
+        sleep(5);
+    }
+}
+```
+
+### Penjelasan:
+Fungsi `monitor_user` digunakan untuk memantau semua proses yang berjalan milik user tertentu dengan membandingkan UID-nya, lalu mencatat aktivitas tersebut dalam log, atau menghentikannya jika berada dalam mode `fail`. Fungsi ini berjalan dalam loop tak hingga dan secara berkala (setiap 5 detik) membaca direktori `/proc` untuk menemukan direktori dengan nama numerik (yang merepresentasikan PID). Ia membuka file `/proc/[pid]/status` untuk mendapatkan UID proses, dan jika cocok dengan UID target user, akan mengecek nama proses di `/proc/[pid]/comm`. Jika nama proses adalah `debugmon`, maka status "RUNNING" dicatat dalam log; jika mode `fail_mode` aktif dan nama proses bukan `debugmon`, maka proses tersebut akan dihentikan (dikirim sinyal `SIGKILL`) dan dicatat sebagai "FAILED" dalam log.
+
+```
+void stop_user_daemon(const char *username) {
+    DIR *dir = opendir(PROC_PATH);
+    if (!dir) return;
+
+    uid_t uid_target = get_uid(username);
+    struct dirent *entry;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (!is_numeric(entry->d_name)) continue;
+
+        int pid = atoi(entry->d_name);
+        char path[256], line[1024], exe_path[256];
+        uid_t uid_proc;
+
+        snprintf(path, sizeof(path), PROC_PATH"/%d/status", pid);
+        FILE *fp = fopen(path, "r");
+        if (!fp) continue;
+
+        while (fgets(line, sizeof(line), fp)) {
+            if (sscanf(line, "Uid: %d", &uid_proc) == 1) break;
+        }
+        fclose(fp);
+        if (uid_proc != uid_target) continue;
+
+        snprintf(path, sizeof(path), PROC_PATH"/%d/exe", pid);
+        ssize_t len = readlink(path, exe_path, sizeof(exe_path) - 1);
+        if (len == -1) continue;
+        exe_path[len] = '\0';
+
+        if (!strstr(exe_path, "debugmon")) continue;
+
+        snprintf(path, sizeof(path), PROC_PATH"/%d/cmdline", pid);
+        fp = fopen(path, "r");
+        if (!fp) continue;
+        size_t read_bytes = fread(line, 1, sizeof(line) - 1, fp);
+        fclose(fp);
+
+        line[read_bytes] = '\0';
+
+        char *args[10];
+        int argc = 0;
+        char *ptr = line;
+        while (ptr < line + read_bytes && argc < 10) {
+            args[argc++] = ptr;
+            ptr += strlen(ptr) + 1;
+        }
+
+        if (argc >= 3 && strstr(args[0], "debugmon") && strcmp(args[2], username) == 0) {
+            if (kill(pid, SIGTERM) == 0) {
+                printf("The debugmon daemon process (PID %d) for user '%s' has been successfully stopped.\n", pid, username);
+            }
+        }
+    }
+    closedir(dir);
+}
+```
+
+Fungsi `stop_user_daemon` bertugas untuk menghentikan proses daemon `debugmon` yang dijalankan oleh user tertentu dengan cara mencari semua proses milik user tersebut di direktori `/proc`, kemudian memverifikasi apakah proses tersebut benar-benar `debugmon` yang dijalankan dengan parameter sesuai username target. Fungsi ini membaca UID dari setiap proses dan mengecek executable-nya melalui symbolic link `/proc/[pid]/exe`, serta membaca argumen proses dari `/proc/[pid]/cmdline`. Jika ditemukan proses `debugmon` dengan argumen yang sesuai, maka proses tersebut dihentikan dengan sinyal `SIGTERM` dan mencetak pesan keberhasilan ke terminal.
+
+```
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        printf("Usage:\n");
+        printf("  %s list <user>    - Display all running processes of the user\n", argv[0]);
+        printf("  %s daemon <user>  - Start debugmon as a daemon to monitor the user\n", argv[0]);
+        printf("  %s stop <user>    - Stop the debugmon daemon monitoring the user\n", argv[0]);
+        printf("  %s fail <user>    - Kill all user processes and block new ones\n", argv[0]);
+        printf("  %s revert <user>  - Revert fail mode and allow user processes again\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
+    if (strcmp(argv[1], "list") == 0) {
+        uid_t uid = get_uid(argv[2]);
+        DIR *dir = opendir(PROC_PATH);
+        if (!dir) {
+            perror("Gagal membuka /proc");
+            return EXIT_FAILURE;
+        }
+
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (!is_numeric(entry->d_name)) continue;
+
+            int pid = atoi(entry->d_name);
+            char path[256], line[256], proc_name[256] = "-";
+            FILE *fp;
+            uid_t proc_uid;
+            double mem_kb = 0;
+
+            snprintf(path, sizeof(path), PROC_PATH"/%d/status", pid);
+            fp = fopen(path, "r");
+            if (!fp) continue;
+
+            while (fgets(line, sizeof(line), fp)) {
+                if (sscanf(line, "Uid: %d", &proc_uid) == 1) break;
+            }
+            fclose(fp);
+            if (proc_uid != uid) continue;
+
+            snprintf(path, sizeof(path), PROC_PATH"/%d/comm", pid);
+            fp = fopen(path, "r");
+            if (fp) {
+                fgets(proc_name, sizeof(proc_name), fp);
+                proc_name[strcspn(proc_name, "\n")] = 0;
+                fclose(fp);
+            }
+
+            snprintf(path, sizeof(path), PROC_PATH"/%d/statm", pid);
+            fp = fopen(path, "r");
+            if (fp) {
+                long pages;
+                if (fscanf(fp, "%ld", &pages) == 1) {
+                    long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024;
+                    mem_kb = pages * page_size_kb;
+                }
+                fclose(fp);
+            }
+
+            printf("PID: %-6d CMD: %-20s CPU: %.2f%% MEM: %.2f KB\n", pid, proc_name, 0.0, mem_kb);
+        }
+        closedir(dir);
+
+    } else if (strcmp(argv[1], "daemon") == 0) {
+        daemonize();
+        monitor_user(argv[2], 0);
+
+    } else if (strcmp(argv[1], "fail") == 0) {
+        daemonize();
+        monitor_user(argv[2], 1);
+
+    } else if (strcmp(argv[1], "stop") == 0 || strcmp(argv[1], "revert") == 0) {
+        stop_user_daemon(argv[2]);
+
+    } else {
+        printf("Command not recognized.\n");
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
+```
+
+Fungsi `main` memproses argumen untuk menentukan aksi program: menampilkan daftar proses `list`, menjalankan pemantauan sebagai `daemon`, menghentikan proses daemon `stop`/`revert`, atau memblokir semua proses pengguna `fail`. Bergantung pada perintah yang diberikan, `main` akan memanggil fungsi `daemonize`, `monitor_user`, atau `stop_user_daemon` untuk mengelola proses user yang ditargetkan.
+
+
+screenshot : 
+
+a. `./debugmon list <user>`
+
+![Image](https://github.com/user-attachments/assets/4914450f-14cd-4147-ab9c-3e94ebffd4f5)
+
+b. `./debugmon daemon <user>`
+
+![Image](https://github.com/user-attachments/assets/ecfa68ae-122f-4bfd-bb65-fef8aed86d99)
+
+c. `./debugmon stop <user>`
+
+![image](https://github.com/user-attachments/assets/4edefd58-899c-4cfa-88a7-aae8bc6d260c)
+
+d. `./debugmon fail <user>`
+
+![Image](https://github.com/user-attachments/assets/08a3f2c5-08a1-4e2e-93bc-87509e99923c)
+
+e. `./debugmon revert <user>`
+
+![Image](https://github.com/user-attachments/assets/51138b13-3b82-40f1-8afd-93b55ca9183a)
+
+f. Mencatat ke dalam file log
+
+![Image](https://github.com/user-attachments/assets/8ab2d392-34d1-4eca-9928-b9ffc8cfd899)
+
+Kendala : tidak ada 
+
+
